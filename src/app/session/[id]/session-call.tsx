@@ -173,7 +173,7 @@ export function SessionCall({
           </p>
           <Link
             href={isTeacher ? "/teacher" : "/student"}
-            className="mt-6 inline-block rounded-lg bg-indigo-600 px-6 py-2 font-semibold text-white hover:bg-indigo-700"
+            className="mt-6 inline-block rounded-lg bg-ink px-6 py-2 font-semibold text-white hover:bg-sage-deep"
           >
             Back to dashboard
           </Link>
@@ -189,7 +189,7 @@ export function SessionCall({
     return (
       <div className="flex min-h-screen items-center justify-center px-4">
         <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 text-center">
-          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-indigo-200 border-t-indigo-600" />
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-ink/10 border-t-ink" />
           <h1 className="mt-4 text-xl font-bold">
             {isTeacher
               ? "Waiting for the student to confirm"
@@ -209,7 +209,7 @@ export function SessionCall({
             </button>
             <Link
               href={isTeacher ? "/teacher" : "/student"}
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+              className="rounded-lg bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-sage-deep"
             >
               Back to dashboard
             </Link>
@@ -251,7 +251,7 @@ export function SessionCall({
             </button>
             <Link
               href={isTeacher ? "/teacher" : "/student"}
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+              className="rounded-lg bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-sage-deep"
             >
               Back to dashboard
             </Link>
@@ -269,7 +269,7 @@ export function SessionCall({
   const secondsLeft = started ? Math.floor((endsAt - now) / 1000) : null;
 
   return (
-    <div className="flex h-screen flex-col bg-gray-950 text-white">
+    <div className="flex h-screen flex-col bg-ink text-white">
       <header className="flex items-center justify-between px-4 py-3">
         <div className="min-w-0">
           <p className="truncate font-semibold">
@@ -284,7 +284,7 @@ export function SessionCall({
             onClick={() => setShowBoard((v) => !v)}
             className={`rounded-lg px-4 py-2 text-sm font-semibold ${
               showBoard
-                ? "bg-indigo-500 hover:bg-indigo-600"
+                ? "bg-sage-deep hover:bg-ink"
                 : "bg-gray-700 hover:bg-gray-600"
             }`}
           >
@@ -405,7 +405,7 @@ function CompletionScreen({
         {isTeacher ? (
           <p className="mt-4 text-lg">
             You earned{" "}
-            <span className="font-bold text-green-600">
+            <span className="font-bold text-sage-deep">
               {formatCents(cost)}
             </span>
           </p>
@@ -456,13 +456,13 @@ function CompletionScreen({
               placeholder="Anything to add? (optional)"
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              className="mt-4 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+              className="mt-4 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-ink focus:outline-none"
             />
             {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
             <button
               type="submit"
               disabled={submitting}
-              className="mt-4 w-full rounded-lg bg-indigo-600 py-2 font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+              className="mt-4 w-full rounded-lg bg-ink py-2 font-semibold text-white hover:bg-sage-deep disabled:opacity-50"
             >
               {submitting ? "Submitting…" : "Submit rating"}
             </button>
@@ -471,7 +471,7 @@ function CompletionScreen({
 
         <Link
           href={backHref}
-          className="mt-6 inline-block text-sm text-indigo-600 hover:underline"
+          className="mt-6 inline-block text-sm text-sage-deep hover:underline"
         >
           Back to dashboard
         </Link>

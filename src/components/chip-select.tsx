@@ -20,8 +20,8 @@ export function ChipSelect({
             onClick={() => onToggle(option)}
             className={`rounded-full border px-3 py-1 text-sm transition-colors ${
               active
-                ? "border-indigo-600 bg-indigo-600 text-white"
-                : "border-gray-300 bg-white text-gray-700 hover:border-indigo-400"
+                ? "border-ink bg-ink text-white"
+                : "border-gray-300 bg-white text-gray-700 hover:border-sage"
             }`}
           >
             {option}

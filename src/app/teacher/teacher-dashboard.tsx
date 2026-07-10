@@ -213,7 +213,7 @@ export function TeacherDashboard({
             return (
               <div
                 key={s.id}
-                className="flex items-center justify-between rounded-xl border border-green-200 bg-green-50 px-4 py-3"
+                className="flex items-center justify-between rounded-xl border border-sage/50 bg-sage/10 px-4 py-3"
               >
                 <div>
                   <p className="font-medium">
@@ -240,7 +240,7 @@ export function TeacherDashboard({
                   )}
                   <Link
                     href={`/session/${s.id}`}
-                    className="rounded-lg bg-green-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-green-700"
+                    className="rounded-lg bg-sage-deep px-4 py-1.5 text-sm font-semibold text-white hover:bg-ink"
                   >
                     {upcoming || unconfirmed ? "Open" : "Rejoin"}
                   </Link>
@@ -265,7 +265,7 @@ export function TeacherDashboard({
         <button
           onClick={toggleOnline}
           className={`relative h-8 w-14 rounded-full transition-colors ${
-            online ? "bg-green-500" : "bg-gray-300"
+            online ? "bg-sage-deep" : "bg-gray-300"
           }`}
           aria-label="Toggle availability"
         >
@@ -299,7 +299,7 @@ export function TeacherDashboard({
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700">
+                        <span className="rounded-full bg-sage/20 px-2 py-0.5 text-xs font-medium text-ink">
                           {r.subject}
                         </span>
                         <span className="text-xs text-gray-400">
@@ -328,7 +328,7 @@ export function TeacherDashboard({
                     <button
                       onClick={() => accept(r)}
                       disabled={accepting !== null}
-                      className="shrink-0 rounded-lg bg-indigo-600 px-5 py-2 font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+                      className="shrink-0 rounded-lg bg-ink px-5 py-2 font-semibold text-white hover:bg-sage-deep disabled:opacity-50"
                     >
                       {accepting === r.id ? "Accepting…" : "Accept"}
                     </button>

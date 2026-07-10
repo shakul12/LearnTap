@@ -9,32 +9,35 @@ export function Navbar({
   homeHref?: string;
 }) {
   return (
-    <header className="border-b border-gray-200 bg-white">
-      <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
-        <Link href={homeHref ?? "/"} className="text-lg font-bold text-indigo-600">
-          LearnTap
+    <header className="sticky top-0 z-40 border-b border-ink/10 bg-background/90 backdrop-blur">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
+        <Link
+          href={homeHref ?? "/"}
+          className="text-xl font-bold tracking-tight text-ink"
+        >
+          LearnTap<span className="text-sage">.</span>
         </Link>
         {name ? (
           <nav className="flex items-center gap-4">
             <Link
               href="/settings"
-              className="text-sm text-gray-500 hover:text-gray-900"
+              className="text-sm font-medium text-ink/60 hover:text-ink"
             >
               {name}
             </Link>
             <SignOutButton />
           </nav>
         ) : (
-          <nav className="flex items-center gap-4">
+          <nav className="flex items-center gap-3">
             <Link
               href="/login"
-              className="text-sm text-gray-500 hover:text-gray-900"
+              className="text-sm font-medium text-ink/60 hover:text-ink"
             >
               Log in
             </Link>
             <Link
               href="/signup"
-              className="rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"
+              className="rounded-full bg-ink px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-sage-deep"
             >
               Sign up
             </Link>

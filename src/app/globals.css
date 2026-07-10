@@ -1,19 +1,25 @@
 @import "tailwindcss";
 
 :root {
-  --background: #fafafa;
-  --foreground: #111827;
+  --background: #fdfcfa;
+  --foreground: #1e1e2f;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  /* Brand palette (skillex-inspired): dark ink, sage green, warm peach */
+  --color-ink: #1e1e2f;
+  --color-sage: #97c680;
+  --color-sage-deep: #5f9e46;
+  --color-peach: #feba88;
+  --color-cream: #f6f2ea;
+  --font-sans: var(--font-space-grotesk);
   --font-mono: var(--font-geist-mono);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-family: var(--font-space-grotesk), system-ui, sans-serif;
 }

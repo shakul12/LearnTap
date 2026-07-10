@@ -65,7 +65,7 @@ export function SettingsForm({ profile }: { profile: Profile }) {
             required
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 focus:border-indigo-500 focus:outline-none"
+            className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 focus:border-ink focus:outline-none"
           />
         </div>
 
@@ -105,7 +105,7 @@ export function SettingsForm({ profile }: { profile: Profile }) {
                 required
                 value={hourlyRate}
                 onChange={(e) => setHourlyRate(e.target.value)}
-                className="mt-1 w-32 rounded-lg border border-gray-300 bg-white px-3 py-2 focus:border-indigo-500 focus:outline-none"
+                className="mt-1 w-32 rounded-lg border border-gray-300 bg-white px-3 py-2 focus:border-ink focus:outline-none"
               />
             </div>
             <label className="flex items-start gap-3">
@@ -113,7 +113,7 @@ export function SettingsForm({ profile }: { profile: Profile }) {
                 type="checkbox"
                 checked={notifyByEmail}
                 onChange={(e) => setNotifyByEmail(e.target.checked)}
-                className="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                className="mt-1 h-4 w-4 rounded border-gray-300 text-sage-deep focus:ring-sage-deep"
               />
               <span>
                 <span className="block text-sm font-medium">
@@ -131,7 +131,7 @@ export function SettingsForm({ profile }: { profile: Profile }) {
         {message && (
           <p
             className={`text-sm ${
-              message === "Saved." ? "text-green-600" : "text-red-600"
+              message === "Saved." ? "text-sage-deep" : "text-red-600"
             }`}
           >
             {message}
@@ -141,7 +141,7 @@ export function SettingsForm({ profile }: { profile: Profile }) {
         <button
           type="submit"
           disabled={saving}
-          className="rounded-lg bg-indigo-600 px-6 py-2 font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+          className="rounded-lg bg-ink px-6 py-2 font-semibold text-white hover:bg-sage-deep disabled:opacity-50"
         >
           {saving ? "Saving…" : "Save changes"}
         </button>

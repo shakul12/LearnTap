@@ -108,7 +108,7 @@ export default function OnboardingPage() {
         <div className="mt-8 grid gap-4 sm:grid-cols-2">
           <button
             onClick={() => setRole("student")}
-            className="rounded-xl border border-gray-300 bg-white p-6 text-left hover:border-indigo-500 hover:shadow-sm"
+            className="rounded-xl border border-gray-300 bg-white p-6 text-left hover:border-sage hover:shadow-sm"
           >
             <div className="text-3xl">🎓</div>
             <div className="mt-3 font-semibold">I&apos;m a student</div>
@@ -118,7 +118,7 @@ export default function OnboardingPage() {
           </button>
           <button
             onClick={() => setRole("teacher")}
-            className="rounded-xl border border-gray-300 bg-white p-6 text-left hover:border-indigo-500 hover:shadow-sm"
+            className="rounded-xl border border-gray-300 bg-white p-6 text-left hover:border-sage hover:shadow-sm"
           >
             <div className="text-3xl">👩‍🏫</div>
             <div className="mt-3 font-semibold">I&apos;m a teacher</div>
@@ -143,7 +143,7 @@ export default function OnboardingPage() {
               required
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 focus:border-indigo-500 focus:outline-none"
+              className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 focus:border-ink focus:outline-none"
             />
           </div>
 
@@ -185,7 +185,7 @@ export default function OnboardingPage() {
                   required
                   value={hourlyRate}
                   onChange={(e) => setHourlyRate(e.target.value)}
-                  className="mt-1 w-32 rounded-lg border border-gray-300 bg-white px-3 py-2 focus:border-indigo-500 focus:outline-none"
+                  className="mt-1 w-32 rounded-lg border border-gray-300 bg-white px-3 py-2 focus:border-ink focus:outline-none"
                 />
               </div>
             </>
@@ -196,7 +196,7 @@ export default function OnboardingPage() {
           <button
             type="submit"
             disabled={saving}
-            className="w-full rounded-lg bg-indigo-600 py-2 font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+            className="w-full rounded-lg bg-ink py-2 font-semibold text-white hover:bg-sage-deep disabled:opacity-50"
           >
             {saving ? "Saving…" : "Continue"}
           </button>

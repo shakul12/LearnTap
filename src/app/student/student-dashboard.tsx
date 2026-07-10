@@ -471,7 +471,7 @@ export function StudentDashboard({
             return (
               <div
                 key={s.id}
-                className="flex items-center justify-between rounded-xl border border-green-200 bg-green-50 px-4 py-3"
+                className="flex items-center justify-between rounded-xl border border-sage/50 bg-sage/10 px-4 py-3"
               >
                 <div>
                   <p className="font-medium">
@@ -494,7 +494,7 @@ export function StudentDashboard({
                   )}
                   <Link
                     href={`/session/${s.id}`}
-                    className="rounded-lg bg-green-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-green-700"
+                    className="rounded-lg bg-sage-deep px-4 py-1.5 text-sm font-semibold text-white hover:bg-ink"
                   >
                     {startsSoon ? "Rejoin" : "Open"}
                   </Link>
@@ -506,7 +506,7 @@ export function StudentDashboard({
       )}
 
       {waiting && waiting.status === "matched" ? (
-        <section className="rounded-2xl border border-green-200 bg-green-50 p-8 text-center">
+        <section className="rounded-2xl border border-sage/50 bg-sage/10 p-8 text-center">
           <div className="text-4xl">🎉</div>
           <h2 className="mt-3 text-xl font-semibold">
             We found you a teacher!
@@ -514,7 +514,7 @@ export function StudentDashboard({
           {matchTeacher ? (
             <>
               <div className="mx-auto mt-5 flex max-w-md items-center gap-4 rounded-xl border border-gray-200 bg-white p-4 text-left">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xl font-bold text-indigo-700">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-sage/20 text-xl font-bold text-ink">
                   {(matchTeacher.full_name || "T").charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0">
@@ -562,7 +562,7 @@ export function StudentDashboard({
             </>
           ) : (
             <div className="mt-5">
-              <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-green-200 border-t-green-600" />
+              <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-sage/50 border-t-sage-deep" />
               <p className="mt-3 text-sm text-gray-500">
                 Loading teacher profile…
               </p>
@@ -582,7 +582,7 @@ export function StudentDashboard({
             <button
               onClick={confirmMatch}
               disabled={deciding !== null}
-              className="rounded-lg bg-green-600 px-6 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50"
+              className="rounded-lg bg-sage-deep px-6 py-2 text-sm font-semibold text-white hover:bg-ink disabled:opacity-50"
             >
               {deciding === "confirm"
                 ? "Starting…"
@@ -597,7 +597,7 @@ export function StudentDashboard({
           </p>
         </section>
       ) : waiting ? (
-        <section className="rounded-2xl border border-indigo-200 bg-indigo-50 p-8 text-center">
+        <section className="rounded-2xl border border-ink/10 bg-cream p-8 text-center">
           {!expired ? (
             waitingSupply === 0 && !isScheduled(waiting.starts_at) ? (
               <>
@@ -621,7 +621,7 @@ export function StudentDashboard({
               </>
             ) : (
               <>
-                <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-indigo-200 border-t-indigo-600" />
+                <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-ink/10 border-t-ink" />
                 <h2 className="mt-4 text-xl font-semibold">
                   Finding you a teacher…
                 </h2>
@@ -676,7 +676,7 @@ export function StudentDashboard({
                 <select
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 focus:border-indigo-500 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 focus:border-ink focus:outline-none"
                 >
                   {SUBJECTS.map((s) => (
                     <option key={s}>{s}</option>
@@ -688,7 +688,7 @@ export function StudentDashboard({
                 <select
                   value={language}
                   onChange={(e) => setLanguage(e.target.value)}
-                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 focus:border-indigo-500 focus:outline-none"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 focus:border-ink focus:outline-none"
                 >
                   {LANGUAGES.map((l) => (
                     <option key={l}>{l}</option>
@@ -699,8 +699,8 @@ export function StudentDashboard({
 
             {formSupply !== null &&
               (formSupply > 0 ? (
-                <p className="flex items-center gap-2 text-sm text-green-700">
-                  <span className="h-2 w-2 rounded-full bg-green-500" />
+                <p className="flex items-center gap-2 text-sm text-sage-deep">
+                  <span className="h-2 w-2 rounded-full bg-sage-deep" />
                   {formSupply} {subject} teacher{formSupply === 1 ? "" : "s"}{" "}
                   for {language} online right now
                 </p>
@@ -724,7 +724,7 @@ export function StudentDashboard({
                 placeholder="e.g. Explain integration by parts, or: my Python function returns None and I don't know why"
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 focus:border-indigo-500 focus:outline-none"
+                className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 focus:border-ink focus:outline-none"
               />
             </div>
 
@@ -738,8 +738,8 @@ export function StudentDashboard({
                     onClick={() => setDuration(d)}
                     className={`rounded-lg border px-4 py-2 text-sm font-medium ${
                       duration === d
-                        ? "border-indigo-600 bg-indigo-600 text-white"
-                        : "border-gray-300 bg-white text-gray-700 hover:border-indigo-400"
+                        ? "border-ink bg-ink text-white"
+                        : "border-gray-300 bg-white text-gray-700 hover:border-sage"
                     }`}
                   >
                     {d} min
@@ -758,8 +758,8 @@ export function StudentDashboard({
                     onClick={() => setPreset(p.offsetMinutes)}
                     className={`rounded-lg border px-4 py-2 text-sm font-medium ${
                       preset === p.offsetMinutes
-                        ? "border-indigo-600 bg-indigo-600 text-white"
-                        : "border-gray-300 bg-white text-gray-700 hover:border-indigo-400"
+                        ? "border-ink bg-ink text-white"
+                        : "border-gray-300 bg-white text-gray-700 hover:border-sage"
                     }`}
                   >
                     {p.label}
@@ -777,8 +777,8 @@ export function StudentDashboard({
                   }}
                   className={`rounded-lg border px-4 py-2 text-sm font-medium ${
                     preset === "custom"
-                      ? "border-indigo-600 bg-indigo-600 text-white"
-                      : "border-gray-300 bg-white text-gray-700 hover:border-indigo-400"
+                      ? "border-ink bg-ink text-white"
+                      : "border-gray-300 bg-white text-gray-700 hover:border-sage"
                   }`}
                 >
                   Pick a time…
@@ -790,7 +790,7 @@ export function StudentDashboard({
                   value={customTime}
                   min={customMin}
                   onChange={(e) => setCustomTime(e.target.value)}
-                  className="mt-3 rounded-lg border border-gray-300 bg-white px-3 py-2 focus:border-indigo-500 focus:outline-none"
+                  className="mt-3 rounded-lg border border-gray-300 bg-white px-3 py-2 focus:border-ink focus:outline-none"
                 />
               )}
             </div>
@@ -800,7 +800,7 @@ export function StudentDashboard({
             <button
               type="submit"
               disabled={posting}
-              className="w-full rounded-lg bg-indigo-600 py-3 font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+              className="w-full rounded-lg bg-ink py-3 font-semibold text-white hover:bg-sage-deep disabled:opacity-50"
             >
               {posting
                 ? "Posting…"
