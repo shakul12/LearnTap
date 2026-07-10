@@ -2,10 +2,12 @@
 
 import DailyIframe, { type DailyCall } from "@daily-co/daily-js";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { formatCents } from "@/lib/constants";
+import { JOIN_EARLY_MS, formatCents, formatWhen } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/client";
 import type { HelpRequest, Profile } from "@/lib/types";
+import { Whiteboard } from "./whiteboard";
 
 export function SessionCall({
   initialRequest,
@@ -16,17 +18,22 @@ export function SessionCall({
   profile: Profile;
   hasReviewed: boolean;
 }) {
+  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [request, setRequest] = useState(initialRequest);
   const [now, setNow] = useState(() => Date.now());
   const [ending, setEnding] = useState(false);
   const [reviewed, setReviewed] = useState(hasReviewed);
+  const [showBoard, setShowBoard] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<DailyCall | null>(null);
 
   const isTeacher = profile.role === "teacher";
   const live = request.status === "matched";
+  const startsAtMs = new Date(request.starts_at).getTime();
+  const canJoin = now >= startsAtMs - JOIN_EARLY_MS;
+  const started = now >= startsAtMs;
 
   // Keep the request in sync — covers the other party ending the session,
   // and the room URL landing just after the student is redirected here.
@@ -62,10 +69,11 @@ export function SessionCall({
     };
   }, [live, request.id, supabase]);
 
-  // Mount the Daily call frame once we have a room URL.
+  // Mount the Daily call frame once we have a room URL and the booked
+  // start time is (nearly) here.
   useEffect(() => {
     const container = containerRef.current;
-    if (!live || !request.daily_room_url || !container) return;
+    if (!live || !canJoin || !request.daily_room_url || !container) return;
 
     let cancelled = false;
     let frame: DailyCall | null = null;
@@ -107,14 +115,22 @@ export function SessionCall({
       frame?.destroy().catch(() => {});
       if (frameRef.current === frame) frameRef.current = null;
     };
-  }, [live, request.daily_room_url, profile.full_name]);
+  }, [live, canJoin, request.daily_room_url, profile.full_name]);
 
-  // Session countdown.
+  // Session countdown (also drives the pre-start "starts in…" timer).
   useEffect(() => {
     if (!live) return;
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, [live]);
+
+  async function cancelUpcoming() {
+    if (!window.confirm("Cancel this booked session?")) return;
+    const { error } = await supabase.rpc("cancel_matched_request", {
+      p_request_id: request.id,
+    });
+    if (!error) router.push(isTeacher ? "/teacher" : "/student");
+  }
 
   async function endSession() {
     if (!window.confirm("End this session for both participants?")) return;
@@ -166,11 +182,91 @@ export function SessionCall({
     );
   }
 
-  const endsAt = request.started_at
-    ? new Date(request.started_at).getTime() +
-      request.duration_minutes * 60_000
-    : null;
-  const secondsLeft = endsAt ? Math.floor((endsAt - now) / 1000) : null;
+  // Matched but the student hasn't confirmed the teacher yet — the video
+  // room doesn't exist until they do. The realtime subscription above moves
+  // this page forward the moment they confirm (or back out).
+  if (!request.confirmed_at) {
+    return (
+      <div className="flex min-h-screen items-center justify-center px-4">
+        <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 text-center">
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-indigo-200 border-t-indigo-600" />
+          <h1 className="mt-4 text-xl font-bold">
+            {isTeacher
+              ? "Waiting for the student to confirm"
+              : "Confirm your teacher"}
+          </h1>
+          <p className="mt-2 text-gray-600">
+            {isTeacher
+              ? "The student is reviewing your profile. The session will open here the moment they go ahead."
+              : "Head back to your dashboard to review your matched teacher and start the session."}
+          </p>
+          <div className="mt-6 flex justify-center gap-3">
+            <button
+              onClick={cancelUpcoming}
+              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Cancel session
+            </button>
+            <Link
+              href={isTeacher ? "/teacher" : "/student"}
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+            >
+              Back to dashboard
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Booked session that hasn't opened yet: waiting room with a countdown.
+  if (!canJoin) {
+    const secondsToStart = Math.max(0, Math.floor((startsAtMs - now) / 1000));
+    const h = Math.floor(secondsToStart / 3600);
+    const m = Math.floor((secondsToStart % 3600) / 60);
+    const s = secondsToStart % 60;
+    return (
+      <div className="flex min-h-screen items-center justify-center px-4">
+        <div className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-8 text-center">
+          <div className="text-4xl">🗓️</div>
+          <h1 className="mt-4 text-xl font-bold">
+            Session booked for {formatWhen(request.starts_at)}
+          </h1>
+          <p className="mt-2 text-gray-600">
+            {request.subject}: {request.topic} · {request.duration_minutes} min
+          </p>
+          <p className="mt-4 font-mono text-3xl">
+            {h > 0 ? `${h}h ` : ""}
+            {String(m).padStart(2, "0")}:{String(s).padStart(2, "0")}
+          </p>
+          <p className="mt-1 text-sm text-gray-500">
+            The room opens 5 minutes before start.
+          </p>
+          <div className="mt-6 flex justify-center gap-3">
+            <button
+              onClick={cancelUpcoming}
+              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Cancel session
+            </button>
+            <Link
+              href={isTeacher ? "/teacher" : "/student"}
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700"
+            >
+              Back to dashboard
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const anchorMs = Math.max(
+    startsAtMs,
+    request.started_at ? new Date(request.started_at).getTime() : 0
+  );
+  const endsAt = anchorMs + request.duration_minutes * 60_000;
+  const secondsLeft = started ? Math.floor((endsAt - now) / 1000) : null;
 
   return (
     <div className="flex h-screen flex-col bg-gray-950 text-white">
@@ -183,8 +279,18 @@ export function SessionCall({
             {request.duration_minutes} min session
           </p>
         </div>
-        <div className="flex items-center gap-4">
-          {secondsLeft !== null && (
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowBoard((v) => !v)}
+            className={`rounded-lg px-4 py-2 text-sm font-semibold ${
+              showBoard
+                ? "bg-indigo-500 hover:bg-indigo-600"
+                : "bg-gray-700 hover:bg-gray-600"
+            }`}
+          >
+            {showBoard ? "Hide whiteboard" : "Whiteboard"}
+          </button>
+          {secondsLeft !== null ? (
             <span
               className={`font-mono text-lg ${
                 secondsLeft <= 120 ? "text-red-400" : "text-gray-200"
@@ -194,28 +300,45 @@ export function SessionCall({
                 ? `${Math.floor(secondsLeft / 60)}:${String(secondsLeft % 60).padStart(2, "0")}`
                 : "Time's up"}
             </span>
+          ) : (
+            <span className="font-mono text-lg text-gray-400">
+              starts in{" "}
+              {Math.max(0, Math.ceil((startsAtMs - now) / 60_000))} min
+            </span>
           )}
-          <button
-            onClick={endSession}
-            disabled={ending}
-            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold hover:bg-red-700 disabled:opacity-50"
-          >
-            {ending ? "Ending…" : "End session"}
-          </button>
+          {started && (
+            <button
+              onClick={endSession}
+              disabled={ending}
+              className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold hover:bg-red-700 disabled:opacity-50"
+            >
+              {ending ? "Ending…" : "End session"}
+            </button>
+          )}
         </div>
       </header>
 
-      <div className="flex-1 px-4 pb-4">
-        {request.daily_room_url ? (
-          <div ref={containerRef} className="h-full w-full" />
-        ) : (
-          <div className="flex h-full items-center justify-center text-gray-400">
-            <div className="text-center">
-              <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-gray-700 border-t-white" />
-              <p className="mt-4">Setting up your room…</p>
+      <div className="flex min-h-0 flex-1 flex-col gap-3 px-4 pb-4 sm:flex-row">
+        <div className={`min-h-0 ${showBoard ? "flex-1 sm:w-1/2" : "flex-1"}`}>
+          {request.daily_room_url ? (
+            <div ref={containerRef} className="h-full w-full" />
+          ) : (
+            <div className="flex h-full items-center justify-center text-gray-400">
+              <div className="text-center">
+                <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-gray-700 border-t-white" />
+                <p className="mt-4">Setting up your room…</p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
+        {/* Keep the board mounted once opened so drawings survive toggling. */}
+        <div
+          className={`min-h-0 overflow-hidden rounded-xl bg-white ${
+            showBoard ? "flex-1 sm:w-1/2" : "hidden"
+          }`}
+        >
+          <Whiteboard sessionId={request.id} userId={profile.id} />
+        </div>
       </div>
     </div>
   );
@@ -234,6 +357,9 @@ function CompletionScreen({
 }) {
   const supabase = useMemo(() => createClient(), []);
   const [rating, setRating] = useState(0);
+  const [expertise, setExpertise] = useState(0);
+  const [professionalism, setProfessionalism] = useState(0);
+  const [communication, setCommunication] = useState(0);
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -244,7 +370,7 @@ function CompletionScreen({
   async function submitReview(e: React.FormEvent) {
     e.preventDefault();
     if (rating === 0) {
-      setError("Pick a star rating first.");
+      setError("Pick an overall star rating first.");
       return;
     }
     setSubmitting(true);
@@ -254,6 +380,9 @@ function CompletionScreen({
       student_id: request.student_id,
       teacher_id: request.accepted_teacher_id,
       rating,
+      expertise_rating: expertise || null,
+      professionalism_rating: professionalism || null,
+      communication_rating: communication || null,
       comment: comment.trim(),
     });
     if (insertError) {
@@ -304,6 +433,23 @@ function CompletionScreen({
                 </button>
               ))}
             </div>
+            <div className="mt-4 space-y-2 rounded-lg bg-gray-50 p-3">
+              <StarRow
+                label="Subject expertise"
+                value={expertise}
+                onChange={setExpertise}
+              />
+              <StarRow
+                label="Professionalism"
+                value={professionalism}
+                onChange={setProfessionalism}
+              />
+              <StarRow
+                label="Communication"
+                value={communication}
+                onChange={setCommunication}
+              />
+            </div>
             <textarea
               rows={2}
               maxLength={500}
@@ -329,6 +475,37 @@ function CompletionScreen({
         >
           Back to dashboard
         </Link>
+      </div>
+    </div>
+  );
+}
+
+function StarRow({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-sm text-gray-600">{label}</span>
+      <div className="flex gap-0.5">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <button
+            key={star}
+            type="button"
+            onClick={() => onChange(star === value ? 0 : star)}
+            className={`text-xl transition-transform hover:scale-110 ${
+              star <= value ? "text-amber-400" : "text-gray-300"
+            }`}
+            aria-label={`${label}: ${star} stars`}
+          >
+            ★
+          </button>
+        ))}
       </div>
     </div>
   );

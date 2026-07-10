@@ -27,6 +27,9 @@ export interface HelpRequest {
   duration_minutes: number;
   language: string;
   status: RequestStatus;
+  starts_at: string;
+  confirmed_at: string | null;
+  declined_teacher_ids: string[];
   accepted_teacher_id: string | null;
   accepted_at: string | null;
   daily_room_name: string | null;
@@ -45,6 +48,9 @@ export interface Review {
   student_id: string;
   teacher_id: string;
   rating: number;
+  expertise_rating: number | null;
+  professionalism_rating: number | null;
+  communication_rating: number | null;
   comment: string;
   created_at: string;
 }

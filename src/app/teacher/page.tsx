@@ -21,19 +21,17 @@ export default async function TeacherPage() {
   if (profile.role === "student") redirect("/student");
 
   const [
-    { data: activeSession },
+    { data: activeSessions },
     { data: openRequests },
     { data: history },
     { data: reviews },
   ] = await Promise.all([
     supabase
       .from("help_requests")
-      .select("*")
+      .select("*, student:profiles!help_requests_student_id_fkey(full_name)")
       .eq("accepted_teacher_id", user.id)
       .eq("status", "matched")
-      .order("accepted_at", { ascending: false })
-      .limit(1)
-      .maybeSingle<HelpRequest>(),
+      .order("starts_at", { ascending: true }),
     supabase
       .from("help_requests")
       .select("*")
@@ -47,24 +45,38 @@ export default async function TeacherPage() {
       .eq("status", "completed")
       .order("created_at", { ascending: false })
       .limit(20),
-    supabase.from("reviews").select("rating").eq("teacher_id", user.id),
+    supabase
+      .from("reviews")
+      .select(
+        "rating, expertise_rating, professionalism_rating, communication_rating"
+      )
+      .eq("teacher_id", user.id),
   ]);
 
-  const ratings = (reviews ?? []).map((r) => r.rating);
-  const avgRating =
-    ratings.length > 0
-      ? ratings.reduce((a, b) => a + b, 0) / ratings.length
+  const avg = (values: (number | null)[]) => {
+    const present = values.filter((v): v is number => v !== null);
+    return present.length > 0
+      ? present.reduce((a, b) => a + b, 0) / present.length
       : null;
+  };
+  const ratings = reviews ?? [];
+  const avgRating = avg(ratings.map((r) => r.rating));
+  const categoryAvgs = {
+    expertise: avg(ratings.map((r) => r.expertise_rating)),
+    professionalism: avg(ratings.map((r) => r.professionalism_rating)),
+    communication: avg(ratings.map((r) => r.communication_rating)),
+  };
 
   return (
     <div className="min-h-screen">
       <Navbar name={profile.full_name} homeHref="/teacher" />
       <TeacherDashboard
         profile={profile}
-        activeSession={activeSession ?? null}
+        activeSessions={(activeSessions ?? []) as (HelpRequest & { student: { full_name: string } | null })[]}
         initialOpenRequests={(openRequests ?? []) as HelpRequest[]}
         history={(history ?? []) as (HelpRequest & { student: { full_name: string } | null })[]}
         avgRating={avgRating}
+        categoryAvgs={categoryAvgs}
         reviewCount={ratings.length}
       />
     </div>

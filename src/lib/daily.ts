@@ -13,8 +13,10 @@ interface DailyRoom {
  * self-expires shortly after the booked duration.
  */
 export async function createDailyRoom(
-  durationMinutes: number
+  durationMinutes: number,
+  startsAt: string
 ): Promise<DailyRoom> {
+  const startMs = Math.max(Date.now(), new Date(startsAt).getTime());
   const res = await fetch("https://api.daily.co/v1/rooms", {
     method: "POST",
     headers: {
@@ -25,7 +27,7 @@ export async function createDailyRoom(
       name: `lt-${randomUUID()}`,
       privacy: "public",
       properties: {
-        exp: Math.floor(Date.now() / 1000) + (durationMinutes + 15) * 60,
+        exp: Math.floor(startMs / 1000) + (durationMinutes + 15) * 60,
         eject_at_room_exp: true,
         enable_screenshare: true,
         enable_chat: true,

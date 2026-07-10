@@ -3,7 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { formatCents, sessionCostCents } from "@/lib/constants";
+import {
+  formatCents,
+  formatWhen,
+  isScheduled,
+  sessionCostCents,
+} from "@/lib/constants";
 import { createClient } from "@/lib/supabase/client";
 import type { HelpRequest, Profile } from "@/lib/types";
 
@@ -11,17 +16,23 @@ type HistoryRow = HelpRequest & { student: { full_name: string } | null };
 
 export function TeacherDashboard({
   profile,
-  activeSession,
+  activeSessions,
   initialOpenRequests,
   history,
   avgRating,
+  categoryAvgs,
   reviewCount,
 }: {
   profile: Profile;
-  activeSession: HelpRequest | null;
+  activeSessions: (HelpRequest & { student: { full_name: string } | null })[];
   initialOpenRequests: HelpRequest[];
   history: HistoryRow[];
   avgRating: number | null;
+  categoryAvgs: {
+    expertise: number | null;
+    professionalism: number | null;
+    communication: number | null;
+  };
   reviewCount: number;
 }) {
   const router = useRouter();
@@ -36,8 +47,11 @@ export function TeacherDashboard({
   const matchesMe = useMemo(
     () => (r: HelpRequest) =>
       profile.subjects.includes(r.subject) &&
-      profile.languages.includes(r.language),
-    [profile.subjects, profile.languages]
+      profile.languages.includes(r.language) &&
+      // A student who declined this teacher's match keeps searching without
+      // seeing the same face reappear.
+      !(r.declined_teacher_ids ?? []).includes(profile.id),
+    [profile.subjects, profile.languages, profile.id]
   );
 
   // Live feed: new requests appear, accepted/cancelled ones vanish.
@@ -83,6 +97,42 @@ export function TeacherDashboard({
     };
   }, [online, supabase]);
 
+  // Keep "Your sessions" live even while offline: refresh when the student
+  // cancels a booked session, one in progress completes, or the student
+  // declines this teacher's match (that update clears accepted_teacher_id,
+  // so detect it via the old row — replica identity is full). Unfiltered
+  // because a server-side eq filter would miss the decline event.
+  useEffect(() => {
+    const channel = supabase
+      .channel(`teacher-sessions-${profile.id}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "help_requests" },
+        (payload) => {
+          const updated = payload.new as HelpRequest;
+          const old = payload.old as Partial<HelpRequest>;
+          if (
+            updated.accepted_teacher_id === profile.id &&
+            (updated.status === "cancelled" || updated.status === "completed")
+          ) {
+            router.refresh();
+          } else if (
+            updated.status === "open" &&
+            old?.accepted_teacher_id === profile.id
+          ) {
+            setToast(
+              "The student decided to keep searching — no worries, more requests are coming."
+            );
+            router.refresh();
+          }
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profile.id, supabase, router]);
+
   async function toggleOnline() {
     const next = !online;
     setOnline(next);
@@ -99,7 +149,18 @@ export function TeacherDashboard({
       method: "POST",
     });
     if (res.ok) {
-      router.push(`/session/${request.id}`);
+      if (isScheduled(request.starts_at)) {
+        // Booked for later: stay on the dashboard so more requests can be
+        // taken; the session appears under "Your sessions".
+        setRequests((prev) => prev.filter((r) => r.id !== request.id));
+        setAccepting(null);
+        setToast(
+          `Booked for ${formatWhen(request.starts_at)} — waiting for the student to confirm.`
+        );
+        router.refresh();
+      } else {
+        router.push(`/session/${request.id}`);
+      }
       return;
     }
     setRequests((prev) => prev.filter((r) => r.id !== request.id));
@@ -109,6 +170,15 @@ export function TeacherDashboard({
         ? "Someone got there first — request already taken."
         : "Could not accept the request. Please try again."
     );
+  }
+
+  async function cancelUpcoming(id: string) {
+    if (!window.confirm("Cancel this booked session?")) return;
+    const { error } = await supabase.rpc("cancel_matched_request", {
+      p_request_id: id,
+    });
+    if (error) setToast(error.message);
+    router.refresh();
   }
 
   const visibleRequests = requests.filter(
@@ -134,18 +204,50 @@ export function TeacherDashboard({
         </div>
       )}
 
-      {activeSession && (
-        <section className="mb-8 rounded-2xl border border-green-200 bg-green-50 p-6 text-center">
-          <h2 className="text-lg font-semibold">Session in progress</h2>
-          <p className="mt-1 text-gray-600">
-            {activeSession.subject}: “{activeSession.topic}”
-          </p>
-          <Link
-            href={`/session/${activeSession.id}`}
-            className="mt-4 inline-block rounded-lg bg-green-600 px-6 py-2 font-semibold text-white hover:bg-green-700"
-          >
-            Rejoin session
-          </Link>
+      {activeSessions.length > 0 && (
+        <section className="mb-8 space-y-3">
+          <h2 className="text-lg font-semibold">Your sessions</h2>
+          {activeSessions.map((s) => {
+            const upcoming = isScheduled(s.starts_at);
+            const unconfirmed = !s.confirmed_at;
+            return (
+              <div
+                key={s.id}
+                className="flex items-center justify-between rounded-xl border border-green-200 bg-green-50 px-4 py-3"
+              >
+                <div>
+                  <p className="font-medium">
+                    {s.subject}: {s.topic}
+                  </p>
+                  <p className="text-sm text-gray-600">
+                    {unconfirmed
+                      ? `Awaiting student confirmation${upcoming ? ` · ${formatWhen(s.starts_at)}` : ""}`
+                      : upcoming
+                        ? formatWhen(s.starts_at)
+                        : "In progress"}{" "}
+                    · {s.duration_minutes} min
+                    {s.student ? ` · with ${s.student.full_name}` : ""}
+                  </p>
+                </div>
+                <div className="flex shrink-0 gap-2">
+                  {(upcoming || unconfirmed) && (
+                    <button
+                      onClick={() => cancelUpcoming(s.id)}
+                      className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                  <Link
+                    href={`/session/${s.id}`}
+                    className="rounded-lg bg-green-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-green-700"
+                  >
+                    {upcoming || unconfirmed ? "Open" : "Rejoin"}
+                  </Link>
+                </div>
+              </div>
+            );
+          })}
         </section>
       )}
 
@@ -204,6 +306,11 @@ export function TeacherDashboard({
                           {r.language} · {r.duration_minutes} min ·{" "}
                           {age(r.created_at)}
                         </span>
+                        {isScheduled(r.starts_at) && (
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                            {formatWhen(r.starts_at)}
+                          </span>
+                        )}
                       </div>
                       <p className="mt-2 font-medium">{r.topic}</p>
                       <p className="mt-1 text-sm text-gray-500">
@@ -245,6 +352,22 @@ export function TeacherDashboard({
             {totalEarned > 0 && <span>Earned: {formatCents(totalEarned)}</span>}
           </div>
         </div>
+        {(categoryAvgs.expertise !== null ||
+          categoryAvgs.professionalism !== null ||
+          categoryAvgs.communication !== null) && (
+          <p className="mt-1 text-sm text-gray-400">
+            {[
+              categoryAvgs.expertise !== null &&
+                `Expertise ${categoryAvgs.expertise.toFixed(1)}`,
+              categoryAvgs.professionalism !== null &&
+                `Professionalism ${categoryAvgs.professionalism.toFixed(1)}`,
+              categoryAvgs.communication !== null &&
+                `Communication ${categoryAvgs.communication.toFixed(1)}`,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+        )}
         {history.length === 0 ? (
           <p className="mt-4 text-sm text-gray-400">No sessions yet.</p>
         ) : (
