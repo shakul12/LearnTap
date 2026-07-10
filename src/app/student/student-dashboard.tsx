@@ -386,6 +386,11 @@ export function StudentDashboard({
       setPosting(false);
       return;
     }
+    // Fire-and-forget: email matching teachers who aren't watching the site.
+    fetch(`/api/requests/${data.id}/notify`, { method: "POST" }).catch(
+      () => {}
+    );
+
     setExpired(false);
     setWaitingSupply(null);
     setWaiting(data);

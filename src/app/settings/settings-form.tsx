@@ -15,6 +15,7 @@ export function SettingsForm({ profile }: { profile: Profile }) {
   const [hourlyRate, setHourlyRate] = useState(
     String(profile.hourly_rate_cents / 100)
   );
+  const [notifyByEmail, setNotifyByEmail] = useState(profile.notify_by_email);
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -40,6 +41,7 @@ export function SettingsForm({ profile }: { profile: Profile }) {
         hourly_rate_cents: isTeacher
           ? Math.round(Number(hourlyRate) * 100)
           : profile.hourly_rate_cents,
+        notify_by_email: notifyByEmail,
       })
       .eq("id", profile.id);
 
@@ -106,6 +108,23 @@ export function SettingsForm({ profile }: { profile: Profile }) {
                 className="mt-1 w-32 rounded-lg border border-gray-300 bg-white px-3 py-2 focus:border-indigo-500 focus:outline-none"
               />
             </div>
+            <label className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                checked={notifyByEmail}
+                onChange={(e) => setNotifyByEmail(e.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <span>
+                <span className="block text-sm font-medium">
+                  Email me about new requests
+                </span>
+                <span className="block text-sm text-gray-500">
+                  Get an email whenever a student posts a request matching
+                  your subjects and languages.
+                </span>
+              </span>
+            </label>
           </>
         )}
 

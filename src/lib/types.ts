@@ -16,6 +16,7 @@ export interface Profile {
   hourly_rate_cents: number;
   is_online: boolean;
   is_verified: boolean;
+  notify_by_email: boolean;
   created_at: string;
 }
 
@@ -38,6 +39,7 @@ export interface HelpRequest {
   ended_at: string | null;
   rate_cents_per_hour: number | null;
   final_cost_cents: number | null;
+  notified_at: string | null;
   created_at: string;
   expires_at: string;
 }
