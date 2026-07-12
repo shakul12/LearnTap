@@ -42,3 +42,23 @@ export async function createDailyRoom(
   const room = await res.json();
   return { name: room.name, url: room.url };
 }
+
+/** Push a room's expiry out (used when a session is extended). */
+export async function extendDailyRoom(
+  roomName: string,
+  newExpEpochSeconds: number
+): Promise<void> {
+  const res = await fetch(`https://api.daily.co/v1/rooms/${roomName}`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.DAILY_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ properties: { exp: newExpEpochSeconds } }),
+  });
+  if (!res.ok) {
+    throw new Error(
+      `Daily room extend failed (${res.status}): ${await res.text()}`
+    );
+  }
+}

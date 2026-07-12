@@ -68,14 +68,20 @@ export async function POST(
   const { data: teachers } = await admin.rpc("matching_teacher_recipients", {
     p_request_id: id,
   });
-  const recipients = (teachers ?? []) as {
+  const allMatching = (teachers ?? []) as {
     teacher_id: string;
     email: string;
     full_name: string;
   }[];
-  if (recipients.length === 0) {
+  if (allMatching.length === 0) {
     return NextResponse.json({ sent: 0 });
   }
+  // Smart matching v1: results arrive ranked (subject track record, rating,
+  // accept speed). With plenty of supply, ping only the top 3 — everyone
+  // still sees the request in the live feed; this just aims the interrupt at
+  // the best-fit teachers instead of spamming the whole roster.
+  const recipients =
+    allMatching.length > 3 ? allMatching.slice(0, 3) : allMatching;
   const apiKey = process.env.RESEND_API_KEY;
 
   const site = process.env.NEXT_PUBLIC_APP_URL ?? "https://learntap.app";

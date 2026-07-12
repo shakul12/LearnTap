@@ -23,6 +23,7 @@ export function SessionCall({
   const [request, setRequest] = useState(initialRequest);
   const [now, setNow] = useState(() => Date.now());
   const [ending, setEnding] = useState(false);
+  const [extending, setExtending] = useState(false);
   const [reviewed, setReviewed] = useState(hasReviewed);
   const [showBoard, setShowBoard] = useState(false);
 
@@ -130,6 +131,18 @@ export function SessionCall({
       p_request_id: request.id,
     });
     if (!error) router.push(isTeacher ? "/teacher" : "/student");
+  }
+
+  async function extendSession() {
+    setExtending(true);
+    const res = await fetch(`/api/requests/${request.id}/extend`, {
+      method: "POST",
+    });
+    if (res.ok) {
+      const { request: updated } = await res.json();
+      setRequest(updated as HelpRequest);
+    }
+    setExtending(false);
   }
 
   async function endSession() {
@@ -277,6 +290,19 @@ export function SessionCall({
           </p>
           <p className="text-sm text-gray-400">
             {request.duration_minutes} min session
+            {request.context_image_url && (
+              <>
+                {" · "}
+                <a
+                  href={request.context_image_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sage underline-offset-2 hover:underline"
+                >
+                  📎 problem photo
+                </a>
+              </>
+            )}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -290,6 +316,24 @@ export function SessionCall({
           >
             {showBoard ? "Hide whiteboard" : "Whiteboard"}
           </button>
+          {secondsLeft !== null &&
+            !isTeacher &&
+            secondsLeft > 0 &&
+            secondsLeft <= 300 && (
+              <button
+                onClick={extendSession}
+                disabled={extending}
+                className="rounded-full bg-sage-deep px-4 py-2 text-sm font-semibold text-white hover:bg-sage disabled:opacity-50"
+              >
+                {extending
+                  ? "Extending…"
+                  : `+15 min${
+                      request.rate_cents_per_hour
+                        ? ` (${formatCents(Math.round(request.rate_cents_per_hour / 4))})`
+                        : ""
+                    }`}
+              </button>
+            )}
           {secondsLeft !== null ? (
             <span
               className={`font-mono text-lg ${

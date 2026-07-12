@@ -15,6 +15,7 @@ import {
   sessionCostCents,
 } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/client";
+import { compressImage, uploadImage } from "@/lib/upload";
 import type { HelpRequest, Profile } from "@/lib/types";
 
 type RequestWithTeacher = HelpRequest & {
@@ -26,6 +27,14 @@ type MatchStats = {
   subject_sessions: number;
   avg_rating: number | null;
   review_count: number;
+  avg_accept_seconds: number | null;
+};
+
+type FavoriteTeacher = {
+  id: string;
+  full_name: string;
+  subjects: string[];
+  is_online: boolean;
 };
 
 export function StudentDashboard({
@@ -33,15 +42,19 @@ export function StudentDashboard({
   initialWaitingRequest,
   upcomingSessions,
   history,
+  favorites: initialFavorites,
 }: {
   profile: Profile;
   initialWaitingRequest: HelpRequest | null;
   upcomingSessions: RequestWithTeacher[];
   history: RequestWithTeacher[];
+  favorites: FavoriteTeacher[];
 }) {
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [waiting, setWaiting] = useState(initialWaitingRequest);
+  const [favorites, setFavorites] = useState(initialFavorites);
+  const [waitlistedKey, setWaitlistedKey] = useState<string | null>(null);
 
   // Form state
   const [subject, setSubject] = useState<string>(SUBJECTS[0]);
@@ -53,6 +66,8 @@ export function StudentDashboard({
   const [preset, setPreset] = useState<number | "custom">(0);
   const [customTime, setCustomTime] = useState("");
   const [customMin, setCustomMin] = useState("");
+  const [contextNote, setContextNote] = useState("");
+  const [contextPhoto, setContextPhoto] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
 
@@ -190,6 +205,10 @@ export function StudentDashboard({
               avg_rating:
                 row.avg_rating === null ? null : Number(row.avg_rating),
               review_count: Number(row.review_count),
+              avg_accept_seconds:
+                row.avg_accept_seconds == null
+                  ? null
+                  : Number(row.avg_accept_seconds),
             }
           : null,
       });
@@ -364,12 +383,28 @@ export function StudentDashboard({
     const scheduled = resolved.startsAtMs > Date.now() + 60_000;
     const startsAtIso = new Date(resolved.startsAtMs).toISOString();
 
+    // Upload the problem photo (if any) before creating the request, so the
+    // teacher sees it from the very first feed card.
+    let contextImageUrl: string | null = null;
+    if (contextPhoto) {
+      try {
+        const blob = await compressImage(contextPhoto);
+        contextImageUrl = (await uploadImage(supabase, profile.id, blob)).url;
+      } catch {
+        setError("Could not upload the photo — try again or remove it.");
+        setPosting(false);
+        return;
+      }
+    }
+
     const { data, error: insertError } = await supabase
       .from("help_requests")
       .insert({
         student_id: profile.id,
         subject,
         topic: topic.trim(),
+        context_note: contextNote.trim(),
+        context_image_url: contextImageUrl,
         duration_minutes: duration,
         language,
         // Instant requests keep the DB defaults (starts now, expires in 10
@@ -394,6 +429,8 @@ export function StudentDashboard({
     setExpired(false);
     setWaitingSupply(null);
     setWaiting(data);
+    setContextNote("");
+    setContextPhoto(null);
     setPosting(false);
   }
 
@@ -433,6 +470,36 @@ export function StudentDashboard({
     });
     if (error) setError(error.message);
     router.refresh();
+  }
+
+  const isFavorite = (teacherId: string) =>
+    favorites.some((f) => f.id === teacherId);
+
+  async function toggleFavorite(teacherId: string, name: string) {
+    if (isFavorite(teacherId)) {
+      setFavorites((prev) => prev.filter((f) => f.id !== teacherId));
+      await supabase
+        .from("favorites")
+        .delete()
+        .eq("student_id", profile.id)
+        .eq("teacher_id", teacherId);
+    } else {
+      setFavorites((prev) => [
+        ...prev,
+        { id: teacherId, full_name: name, subjects: [], is_online: false },
+      ]);
+      await supabase
+        .from("favorites")
+        .insert({ student_id: profile.id, teacher_id: teacherId });
+      router.refresh();
+    }
+  }
+
+  async function joinWaitlist() {
+    const { error: insertError } = await supabase
+      .from("online_waitlist")
+      .insert({ student_id: profile.id, subject, language });
+    if (!insertError) setWaitlistedKey(`${subject}|${language}`);
   }
 
   const totalSpent = history
@@ -537,6 +604,13 @@ export function StudentDashboard({
                       `${matchStats.sessions_taught} session${
                         matchStats.sessions_taught === 1 ? "" : "s"
                       } taught · `}
+                    {matchStats &&
+                      matchStats.avg_accept_seconds !== null &&
+                      `⚡ accepts in ~${
+                        matchStats.avg_accept_seconds < 90
+                          ? `${Math.max(5, Math.round(matchStats.avg_accept_seconds / 5) * 5)}s`
+                          : `${Math.round(matchStats.avg_accept_seconds / 60)} min`
+                      } · `}
                     On LearnTap since{" "}
                     {new Date(matchTeacher.created_at).getFullYear()}
                   </p>
@@ -668,6 +742,37 @@ export function StudentDashboard({
         </section>
       ) : (
         <section className="rounded-2xl border border-gray-200 bg-white p-8">
+          {favorites.length > 0 && (
+            <div className="mb-6 flex flex-wrap items-center gap-2 border-b border-gray-100 pb-5">
+              <span className="mr-1 text-sm font-medium text-gray-500">
+                Your teachers:
+              </span>
+              {favorites.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => {
+                    if (t.subjects[0] && SUBJECTS.includes(t.subjects[0] as (typeof SUBJECTS)[number])) {
+                      setSubject(t.subjects[0]);
+                    }
+                  }}
+                  title={
+                    t.is_online
+                      ? "Online now — posting in their subject makes a rematch likely"
+                      : "Currently offline"
+                  }
+                  className="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm hover:border-sage"
+                >
+                  <span
+                    className={`h-2 w-2 rounded-full ${
+                      t.is_online ? "bg-sage-deep" : "bg-gray-300"
+                    }`}
+                  />
+                  {t.full_name}
+                </button>
+              ))}
+            </div>
+          )}
           <h1 className="text-2xl font-bold">What do you need help with?</h1>
           <form onSubmit={postRequest} className="mt-6 space-y-5">
             <div className="grid gap-4 sm:grid-cols-2">
@@ -704,12 +809,24 @@ export function StudentDashboard({
                   {formSupply} {subject} teacher{formSupply === 1 ? "" : "s"}{" "}
                   for {language} online right now
                 </p>
+              ) : waitlistedKey === `${subject}|${language}` ? (
+                <p className="flex items-center gap-2 text-sm text-sage-deep">
+                  <span className="h-2 w-2 rounded-full bg-sage-deep" />
+                  You&apos;re on the list — we&apos;ll email you the moment a{" "}
+                  {subject} teacher comes online.
+                </p>
               ) : (
-                <p className="flex items-center gap-2 text-sm text-amber-600">
+                <p className="flex flex-wrap items-center gap-2 text-sm text-amber-600">
                   <span className="h-2 w-2 rounded-full bg-amber-500" />
-                  No {subject} teachers for {language} online right now — an
-                  instant request may go unanswered, but you can schedule for
-                  later.
+                  No {subject} teachers for {language} online right now — you
+                  can schedule for later, or
+                  <button
+                    type="button"
+                    onClick={joinWaitlist}
+                    className="font-semibold underline underline-offset-2 hover:text-amber-800"
+                  >
+                    get an email when one comes online
+                  </button>
                 </p>
               ))}
 
@@ -726,6 +843,62 @@ export function StudentDashboard({
                 onChange={(e) => setTopic(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 focus:border-ink focus:outline-none"
               />
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium">
+                  What have you tried?{" "}
+                  <span className="font-normal text-gray-400">(optional)</span>
+                </label>
+                <textarea
+                  rows={2}
+                  maxLength={500}
+                  placeholder="e.g. I substituted u = x² but got stuck at the integral"
+                  value={contextNote}
+                  onChange={(e) => setContextNote(e.target.value)}
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-ink focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium">
+                  Photo of the problem{" "}
+                  <span className="font-normal text-gray-400">(optional)</span>
+                </label>
+                <label className="mt-1 flex cursor-pointer items-center gap-3 rounded-lg border border-dashed border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 hover:border-sage">
+                  <span className="text-xl">📷</span>
+                  <span className="min-w-0 truncate">
+                    {contextPhoto
+                      ? contextPhoto.name
+                      : "Snap or upload your homework"}
+                  </span>
+                  {contextPhoto && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setContextPhoto(null);
+                      }}
+                      className="ml-auto shrink-0 text-gray-400 hover:text-gray-700"
+                      aria-label="Remove photo"
+                    >
+                      ✕
+                    </button>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) =>
+                      setContextPhoto(e.target.files?.[0] ?? null)
+                    }
+                  />
+                </label>
+                <p className="mt-1 text-xs text-gray-400">
+                  Teachers see it before accepting, and it can be pulled onto
+                  the whiteboard.
+                </p>
+              </div>
             </div>
 
             <div>
@@ -840,7 +1013,29 @@ export function StudentDashboard({
                     {h.teacher ? ` · with ${h.teacher.full_name}` : ""}
                   </p>
                 </div>
-                <div className="text-right">
+                <div className="flex items-center gap-3">
+                  {h.status === "completed" && h.accepted_teacher_id && (
+                    <button
+                      onClick={() =>
+                        toggleFavorite(
+                          h.accepted_teacher_id!,
+                          h.teacher?.full_name ?? "Teacher"
+                        )
+                      }
+                      title={
+                        isFavorite(h.accepted_teacher_id)
+                          ? "Remove from your teachers"
+                          : "Save to your teachers"
+                      }
+                      className={`text-lg transition-transform hover:scale-110 ${
+                        isFavorite(h.accepted_teacher_id)
+                          ? "text-red-500"
+                          : "text-gray-300 hover:text-red-400"
+                      }`}
+                    >
+                      ♥
+                    </button>
+                  )}
                   {h.status === "completed" ? (
                     <span className="font-semibold">
                       {formatCents(h.final_cost_cents ?? 0)}

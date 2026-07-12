@@ -141,6 +141,10 @@ export function TeacherDashboard({
       .from("profiles")
       .update({ is_online: next })
       .eq("id", profile.id);
+    if (next) {
+      // Tell waitlisted students their teacher showed up (fire-and-forget).
+      fetch("/api/waitlist/notify", { method: "POST" }).catch(() => {});
+    }
   }
 
   async function accept(request: HelpRequest) {
@@ -315,6 +319,21 @@ export function TeacherDashboard({
                         )}
                       </div>
                       <p className="mt-2 font-medium">{r.topic}</p>
+                      {r.context_note && (
+                        <p className="mt-1 line-clamp-2 text-sm italic text-gray-500">
+                          Tried so far: {r.context_note}
+                        </p>
+                      )}
+                      {r.context_image_url && (
+                        <a
+                          href={r.context_image_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-1 inline-block text-sm font-medium text-sage-deep hover:underline"
+                        >
+                          📎 View problem photo
+                        </a>
+                      )}
                       <p className="mt-1 text-sm text-gray-500">
                         You&apos;d earn{" "}
                         <span className="font-semibold text-gray-900">

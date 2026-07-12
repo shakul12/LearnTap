@@ -25,6 +25,8 @@ export interface HelpRequest {
   student_id: string;
   subject: string;
   topic: string;
+  context_note: string;
+  context_image_url: string | null;
   duration_minutes: number;
   language: string;
   status: RequestStatus;
