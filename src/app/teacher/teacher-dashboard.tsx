@@ -9,6 +9,7 @@ import {
   isScheduled,
   sessionCostCents,
 } from "@/lib/constants";
+import { PushSetup } from "@/components/push-setup";
 import { createClient } from "@/lib/supabase/client";
 import type { HelpRequest, Profile } from "@/lib/types";
 
@@ -198,6 +199,7 @@ export function TeacherDashboard({
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-10">
+      <PushSetup userId={profile.id} />
       {toast && (
         <div className="mb-6 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           {toast}

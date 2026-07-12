@@ -16,6 +16,8 @@ export const metadata: Metadata = {
   title: "LearnTap — Learn Anything. Instantly.",
   description:
     "On-demand 1-on-1 help from verified teachers. Post what you're stuck on and start a live session in minutes.",
+  icons: { apple: "/icons/apple-touch-icon.png" },
+  appleWebApp: { capable: true, title: "LearnTap", statusBarStyle: "default" },
 };
 
 export default function RootLayout({
