@@ -17,7 +17,7 @@ A student describes what they're stuck on ("Explain integration by parts", 30 mi
 1. Create a free project at [supabase.com](https://supabase.com).
 2. In **Authentication → Sign In / Providers → Email**, turn **off** "Confirm email" (so test signups are instant).
 3. Apply the schema — either:
-   - paste `supabase/migrations/0001_init.sql` into the SQL Editor and run it, or
+   - run each SQL file in `supabase/migrations/` in numeric order in the SQL Editor, or
    - use the CLI: `npx supabase link --project-ref <your-ref>` then `npx supabase db push`.
 4. Copy the project URL, anon key, and service-role key from **Settings → API**.
 

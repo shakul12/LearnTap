@@ -26,9 +26,12 @@ export function SessionCall({
   const [extending, setExtending] = useState(false);
   const [reviewed, setReviewed] = useState(hasReviewed);
   const [showBoard, setShowBoard] = useState(false);
+  const [callAttempt, setCallAttempt] = useState(0);
+  const [callError, setCallError] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<DailyCall | null>(null);
+  const teardownRef = useRef<Promise<unknown> | null>(null);
 
   const isTeacher = profile.role === "teacher";
   const live = request.status === "matched";
@@ -74,12 +77,15 @@ export function SessionCall({
   // start time is (nearly) here.
   useEffect(() => {
     const container = containerRef.current;
-    if (!live || !canJoin || !request.daily_room_url || !container) return;
+    const roomUrl = request.daily_room_url;
+    if (!live || !canJoin || !roomUrl || !container) return;
 
     let cancelled = false;
     let frame: DailyCall | null = null;
 
-    (async () => {
+    const joinCall = async () => {
+      await teardownRef.current;
+      if (cancelled) return;
       // Daily allows a single instance and destroy() is async, so on
       // strict-mode remounts we must wait out the previous frame's
       // teardown before creating ours.
@@ -94,7 +100,7 @@ export function SessionCall({
       if (cancelled) return;
 
       frame = DailyIframe.createFrame(container, {
-        url: request.daily_room_url!,
+        url: roomUrl,
         showLeaveButton: false,
         iframeStyle: {
           width: "100%",
@@ -104,19 +110,19 @@ export function SessionCall({
         },
       });
       frameRef.current = frame;
-      try {
-        await frame.join({ userName: profile.full_name || "Guest" });
-      } catch {
-        // frame was destroyed mid-join (unmount)
-      }
-    })();
+      await frame.join({ userName: profile.full_name || "Guest" });
+    };
+
+    void joinCall().catch(() => {
+      if (!cancelled) setCallError(true);
+    });
 
     return () => {
       cancelled = true;
-      frame?.destroy().catch(() => {});
+      if (frame) teardownRef.current = frame.destroy().catch(() => {});
       if (frameRef.current === frame) frameRef.current = null;
     };
-  }, [live, canJoin, request.daily_room_url, profile.full_name]);
+  }, [live, canJoin, request.daily_room_url, profile.full_name, callAttempt]);
 
   // Session countdown (also drives the pre-start "starts in…" timer).
   useEffect(() => {
@@ -307,6 +313,8 @@ export function SessionCall({
         </div>
         <div className="flex items-center gap-3">
           <button
+            aria-controls="session-whiteboard"
+            aria-expanded={showBoard}
             onClick={() => setShowBoard((v) => !v)}
             className={`rounded-lg px-4 py-2 text-sm font-semibold ${
               showBoard
@@ -365,7 +373,24 @@ export function SessionCall({
       <div className="flex min-h-0 flex-1 flex-col gap-3 px-4 pb-4 sm:flex-row">
         <div className={`min-h-0 ${showBoard ? "flex-1 sm:w-1/2" : "flex-1"}`}>
           {request.daily_room_url ? (
-            <div ref={containerRef} className="h-full w-full" />
+            <div className="relative h-full w-full">
+              <div ref={containerRef} className="h-full w-full" />
+              {callError && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 rounded-xl bg-gray-900 p-4 text-center">
+                  <p role="alert">Couldn&apos;t connect to the call.</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCallError(false);
+                      setCallAttempt((attempt) => attempt + 1);
+                    }}
+                    className="rounded-lg bg-sage-deep px-4 py-2 text-sm font-semibold"
+                  >
+                    Rejoin call
+                  </button>
+                </div>
+              )}
+            </div>
           ) : (
             <div className="flex h-full items-center justify-center text-gray-400">
               <div className="text-center">
@@ -375,8 +400,9 @@ export function SessionCall({
             </div>
           )}
         </div>
-        {/* Keep the board mounted once opened so drawings survive toggling. */}
+        {/* Keep the board connected while it is hidden or the call reconnects. */}
         <div
+          id="session-whiteboard"
           className={`min-h-0 overflow-hidden rounded-xl bg-white ${
             showBoard ? "flex-1 sm:w-1/2" : "hidden"
           }`}

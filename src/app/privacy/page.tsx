@@ -53,8 +53,8 @@ export default function PrivacyPage() {
         <H>2. What we collect</H>
         <p><b>When you join the waitlist:</b></p>
         <ul>
-          <li>Your name, WhatsApp number and (optionally) email address</li>
-          <li>Your child&apos;s class, school board and your city</li>
+          <li>Your name, email address and optional mobile number</li>
+          <li>Your child&apos;s class and your city</li>
           <li>Anything you tell us about where your child needs help (optional)</li>
           <li>
             How you found us, such as the link or campaign you clicked
